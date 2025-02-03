@@ -1,3 +1,5 @@
+#! /usr/bin/python3
+
 import string
 import numpy as np
 import sys
@@ -18,12 +20,14 @@ from sklearn.metrics import silhouette_score
 def runTest(input: string):
     inputPath = Path(input)
 
+    print(f"Reading: {input}", flush=True)
+    
     sc.settings.verbosity = 3 # verbosity: errors (0), warnings (1), info (2), hints (3)
     #sc.logging.print_header()
     #sc.settings.set_figure_params(dpi=80, facecolor='white')
 
     # save time usage ####
-    time_sc = pd.DataFrame(index=["find_mit_gene", "filter", "normalization", "hvg",
+    time_sc = pd.DataFrame(index=["loading", "find_mit_gene", "filter", "normalization", "hvg",
                                   "scaling", "PCA", "t-sne", "umap", "louvain", "leiden"],
                            columns=["time_sec"])
 
@@ -31,9 +35,16 @@ def runTest(input: string):
 
     # data ####
 
+    start_time = time.time()
     adata = sc.read_h5ad(input)
     adata.var_names_make_unique()  # this is unnecessary if using `var_names='gene_ids'` in `sc.read_10x_mtx`
+    print( "Input size: ", adata.shape, flush=True)
     adata
+
+    end_time = time.time()
+    time_elapsed = end_time - start_time
+    print("Loading data Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[0, 0] = time_elapsed
 
     # Show those genes that yield the highest fraction of counts in each single cell, across all cells.
     sc.pl.highest_expr_genes(adata, n_top=20, )
@@ -49,8 +60,8 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[0, 0] = time_elapsed
+    print("Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[1, 0] = time_elapsed
 
     # filter data sulle cellule, profondità di sequenziamento####
     start_time = time.time()
@@ -66,8 +77,9 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[1, 0] = time_elapsed
+    adata
+    print("Filtering Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[2, 0] = time_elapsed
 
     # normalization ####
     start_time = time.time()
@@ -78,7 +90,7 @@ def runTest(input: string):
     end_time = time.time()
     time_elapsed = end_time - start_time
     print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[2, 0] = time_elapsed
+    time_sc.iloc[3, 0] = time_elapsed
 
     # Identification of highly variable features (feature selection) ####
     start_time = time.time()
@@ -92,8 +104,9 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[3, 0] = time_elapsed
+    adata
+    print("Normalization Time Elapsed:", time_elapsed)
+    time_sc.iloc[4, 0] = time_elapsed
 
     df = pd.DataFrame(adata.var.highly_variable, columns=['hvg'])
     df.to_excel(inputPath.with_name( inputPath.suffix + '_hvg.xlsx'), index=False)
@@ -107,9 +120,10 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[4, 0] = time_elapsed
+    print("Normalization Time Elapsed:", time_elapsed)
+    time_sc.iloc[5, 0] = time_elapsed
 
+    print( "PCA input size: ", adata.shape, flush=True)
     adata.write_csvs(inputPath.with_name( inputPath.stem + '_scaled'), False)
 
     # PCA ####
@@ -123,8 +137,8 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[5, 0] = time_elapsed
+    print("PCA Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[6, 0] = time_elapsed
     adata.write_csvs(inputPath.with_name( inputPath.stem + '_PCA'), False)
 
     # t-sne ####
@@ -134,8 +148,8 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[6, 0] = time_elapsed
+    print("T-SNE Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[7, 0] = time_elapsed
 
     # UMAP ####
     start_time = time.time()
@@ -144,8 +158,8 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[7, 0] = time_elapsed
+    print("UMAP Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[8, 0] = time_elapsed
 
     # louvain ####
     start_time = time.time()
@@ -154,8 +168,8 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[8, 0] = time_elapsed
+    print("Louvain Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[9, 0] = time_elapsed
 
     true_labels = adata.obs['Sample'].astype(str)
     predicted_labels = adata.obs['louvain'].astype(str)
@@ -184,8 +198,8 @@ def runTest(input: string):
 
     end_time = time.time()
     time_elapsed = end_time - start_time
-    print("Time Elapsed:", time_elapsed)
-    time_sc.iloc[9, 0] = time_elapsed
+    print("Leiden Time Elapsed:", time_elapsed, flush=True)
+    time_sc.iloc[10, 0] = time_elapsed
 
     true_labels = adata.obs['Sample'].astype(str)
     predicted_labels = adata.obs['leiden'].astype(str)
