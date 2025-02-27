@@ -20,9 +20,8 @@ from sklearn.metrics import silhouette_score
 
 def runTest(input: string):
     inputPath = Path(input)
+    ext = inputPath.suffix
 
-    print(f"Reading: {input}", flush=True)
-    
     sc.settings.verbosity = 3 # verbosity: errors (0), warnings (1), info (2), hints (3)
     #sc.logging.print_header()
     #sc.settings.set_figure_params(dpi=80, facecolor='white')
@@ -32,12 +31,18 @@ def runTest(input: string):
                                   "scaling", "PCA", "t-sne", "umap", "louvain", "leiden"],
                            columns=["time_sec"])
 
-
-
     # data ####
-
     start_time = datetime.now()
-    adata = sc.read_h5ad(input)
+
+    if (ext == '.h5ad'):
+        adata = sc.read_h5ad(input)
+    elif (ext == '.h5'):
+        adata = sc.read_10x_h5(input)
+    else:
+        print(f'This script can read only h5ad | TenX.h5 files')
+        exit(-2)
+
+
     adata.var_names_make_unique()  # this is unnecessary if using `var_names='gene_ids'` in `sc.read_10x_mtx`
     print( "Input size: ", adata.shape, flush=True)
     adata
@@ -47,12 +52,15 @@ def runTest(input: string):
     print(f"{end_time}: Loading data Time Elapsed:", time_elapsed, flush=True)
     time_sc.iloc[0, 0] = time_elapsed
 
+    start_time = datetime.now()
     # Show those genes that yield the highest fraction of counts in each single cell, across all cells.
     sc.pl.highest_expr_genes(adata, n_top=20, )
+    end_time = datetime.now()
+    time_elapsed = end_time - start_time
+    print(f"{end_time}: Selecting top 20 genes Time Elapsed:", time_elapsed, flush=True)
 
     # find mitocondrial genes ####
     start_time = datetime.now()
-
     adata.var['mt'] = adata.var_names.str.startswith('MT-')  # annotate the group of mitochondrial genes as 'mt'
     sc.pp.calculate_qc_metrics(adata, qc_vars=['mt'], percent_top=None, log1p=False, inplace=True)
 
@@ -61,7 +69,7 @@ def runTest(input: string):
 
     end_time = datetime.now()
     time_elapsed = end_time - start_time
-    print(f"{end_time}: Time Elapsed:", time_elapsed, flush=True)
+    print(f"{end_time}: Finding MT genes Time Elapsed:", time_elapsed, flush=True)
     time_sc.iloc[1, 0] = time_elapsed
 
     # filter data sulle cellule, profondità di sequenziamento####
@@ -90,7 +98,7 @@ def runTest(input: string):
 
     end_time = datetime.now()
     time_elapsed = end_time - start_time
-    print(f"{end_time}: Time Elapsed:", time_elapsed)
+    print(f"{end_time}: Normalization Time Elapsed:", time_elapsed)
     time_sc.iloc[3, 0] = time_elapsed
 
     # Identification of highly variable features (feature selection) ####
@@ -106,7 +114,7 @@ def runTest(input: string):
     end_time = datetime.now()
     time_elapsed = end_time - start_time
     adata
-    print(f"{end_time}: Normalization Time Elapsed:", time_elapsed)
+    print(f"{end_time}: selecting higly variable genes Time Elapsed:", time_elapsed)
     time_sc.iloc[4, 0] = time_elapsed
 
     df = pd.DataFrame(adata.var.highly_variable, columns=['hvg'])
@@ -121,7 +129,7 @@ def runTest(input: string):
 
     end_time = datetime.now()
     time_elapsed = end_time - start_time
-    print(f"{end_time}: Normalization Time Elapsed:", time_elapsed)
+    print(f"{end_time}: Scaling Time Elapsed:", time_elapsed, flush=True)
     time_sc.iloc[5, 0] = time_elapsed
 
     print( f"{end_time}: PCA input size: ", adata.shape, flush=True)
@@ -233,8 +241,4 @@ if __name__ == "__main__":
         print( f"{Path(sys.argv[0]).name} inputData.h5ad")
         exit(-1)
     else:
-        if (Path(sys.argv[1]).suffix != '.h5ad'):
-            print(f'This script can read only h5ad input files')
-            exit(-2)
-        else:
-            runTest(sys.argv[1])
+        runTest(sys.argv[1])
